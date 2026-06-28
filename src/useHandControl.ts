@@ -14,7 +14,9 @@ export type HandState = {
   fist: boolean;
 };
 
-const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm";
+// Keep this version in sync with the @mediapipe/tasks-vision version in
+// package.json to avoid runtime/ABI mismatches between the JS API and the WASM.
+const WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm";
 const MODEL_URL =
   "https://storage.googleapis.com/mediapipe-tasks/gesture_recognizer/gesture_recognizer.task";
 
