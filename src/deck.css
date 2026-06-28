@@ -12,10 +12,25 @@
   gap: 12px;
 }
 
-.deck > *:not(.hud-aurora):not(.hud-vignette) {
+.deck > *:not(.hud-aurora):not(.hud-vignette):not(.hud-scanlines) {
   position: relative;
   z-index: 1;
 }
+
+/* ===== HUD overlays (decorative, pointer-transparent) ===== */
+.hud-scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0) 0 2px,
+    rgba(0, 0, 0, 0.16) 2px 3px
+  );
+  opacity: 0.35;
+}
+
 
 .deck-panel {
   border-radius: 22px;
@@ -316,42 +331,86 @@
 
 .caption.dim { color: var(--muted); }
 
-/* Session pulse waveform — varied bar heights form a waveform silhouette,
-   and gently animate (scaleY) while listening/speaking. */
-.pulse {
+/* Orb chrome: rotating tick ring + sweeping radar arc around the core */
+.orb-ring,
+.orb-radar {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.orb-ring {
+  inset: -3%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(var(--orb-accent, 63, 208, 176), 0.32) 0deg 0.7deg,
+    transparent 0.7deg 6deg
+  );
+  -webkit-mask: radial-gradient(circle, transparent 72%, #000 73%, #000 77%, transparent 78%);
+  mask: radial-gradient(circle, transparent 72%, #000 73%, #000 77%, transparent 78%);
+  animation: orb-spin-rev 44s linear infinite;
+}
+
+.orb-radar {
+  inset: 1%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(var(--orb-accent, 63, 208, 176), 0) 0deg,
+    rgba(var(--orb-accent, 63, 208, 176), 0.22) 38deg,
+    rgba(var(--orb-accent, 63, 208, 176), 0) 80deg
+  );
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 59%, #000 71%, transparent 72%);
+  mask: radial-gradient(circle, transparent 58%, #000 59%, #000 71%, transparent 72%);
+  animation: orb-spin 7s linear infinite;
+}
+
+.deck.awake .orb-ring { opacity: 1; }
+.deck.awake .orb-radar { opacity: 0.7; }
+.deck.awake .orb-stage { animation: orb-ignite 0.9s ease; }
+
+@keyframes orb-spin { to { transform: rotate(360deg); } }
+@keyframes orb-spin-rev { to { transform: rotate(-360deg); } }
+@keyframes orb-ignite {
+  from { transform: scale(0.9); filter: brightness(0.55) saturate(0.6); }
+  to { transform: scale(1); filter: brightness(1) saturate(1); }
+}
+
+/* Blinking caret on the live caption */
+.caption-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 7px;
+  vertical-align: -2px;
+  background: var(--teal);
+  box-shadow: 0 0 8px var(--teal);
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
+/* Telemetry readout */
+.telemetry {
   display: flex;
   align-items: center;
-  gap: 3px;
-  height: 38px;
-  width: min(72%, 540px);
-  justify-content: center;
-}
-
-.pulse span {
-  width: 3px;
-  height: calc(4px + var(--h, 0.3) * 28px);
-  border-radius: 2px;
-  background: var(--teal-soft);
+  gap: 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
   opacity: 0.5;
-  transform-origin: center;
-  transition: background 0.3s ease;
+  transition: opacity 0.4s ease;
 }
 
-.pulse.active span {
-  animation: pulse-wave 1.1s ease-in-out infinite;
-}
-
-.pulse.speaking span { background: var(--coral); }
-
-.pulse span:nth-child(2n) { animation-delay: 0.08s; }
-.pulse span:nth-child(3n) { animation-delay: 0.18s; }
-.pulse span:nth-child(5n) { animation-delay: 0.28s; }
-.pulse span:nth-child(7n) { animation-delay: 0.4s; }
-
-@keyframes pulse-wave {
-  0%, 100% { transform: scaleY(0.45); opacity: 0.5; }
-  50% { transform: scaleY(1.18); opacity: 1; }
-}
+.telemetry.live { opacity: 0.82; }
+.telemetry i { font-style: normal; color: var(--deep); margin-right: 6px; opacity: 0.7; }
+.telemetry .sep { opacity: 0.3; }
 
 /* Transport controls */
 .transport {
@@ -664,8 +723,10 @@
 [data-theme="dark"] .camera-off { background: rgba(120, 220, 200, 0.06); }
 
 @media (prefers-reduced-motion: reduce) {
-  .pulse.active span,
   .t-btn.primary.live,
   .wcard-progress i,
-  .cam-status i { animation: none; }
+  .cam-status i,
+  .orb-ring,
+  .orb-radar,
+  .caption-caret { animation: none; }
 }

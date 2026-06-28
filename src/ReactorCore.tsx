@@ -40,10 +40,17 @@ function drawArc(
   c.shadowBlur = 0;
 }
 
-export default function ReactorCore({ state }: { state: ReactorState }) {
+export default function ReactorCore({
+  state,
+  levelRef,
+}: {
+  state: ReactorState;
+  levelRef?: { current: number };
+}) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stateRef = useRef<ReactorState>(state);
   const energyRef = useRef(0);
+  const liveRef = useRef(0);
 
   useEffect(() => {
     stateRef.current = state;
@@ -87,7 +94,12 @@ export default function ReactorCore({ state }: { state: ReactorState }) {
       const s = stateRef.current;
       const palette = PALETTES[s];
       energyRef.current += (targetEnergy(s) - energyRef.current) * 0.06;
-      const energy = energyRef.current;
+      // Live audio level (mic in / Gemini out) reacts fast on top of the smooth
+      // base energy so the core visibly breathes with the actual voice.
+      const liveTarget = levelRef ? Math.max(0, Math.min(1, levelRef.current)) : 0;
+      liveRef.current += (liveTarget - liveRef.current) * 0.35;
+      const live = liveRef.current;
+      const energy = Math.min(1, energyRef.current + live * 0.6);
       const t = time / 1000;
 
       const cx = width / 2;
@@ -202,6 +214,12 @@ export default function ReactorCore({ state }: { state: ReactorState }) {
 
       drawArc(c, cx, cy, coreR, 0, Math.PI * 2, palette.accent, 1.4, 0.85, 8);
       drawArc(c, cx, cy, coreR * 1.72, t * 0.6, t * 0.6 + Math.PI * 1.65, palette.primary, 1.3, 0.5, 5);
+
+      // Voice-reactive ring: radius + brightness pulse with the live audio level.
+      if (live > 0.01) {
+        const reactR = unit * (0.46 + live * 0.34);
+        drawArc(c, cx, cy, reactR, 0, Math.PI * 2, palette.secondary, 1 + live * 3, 0.18 + live * 0.6, live * 18);
+      }
 
       raf = requestAnimationFrame(draw);
     }

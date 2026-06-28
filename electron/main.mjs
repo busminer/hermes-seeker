@@ -4,10 +4,17 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-const { app, BrowserWindow, ipcMain, session } = electron;
+const { app, BrowserWindow, ipcMain, session, nativeImage, Menu } = electron;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
+
+// Name the app "Iris" (menu bar / about panel). The Dock tile fully reflects this
+// only in a packaged build; in dev the generic Electron bundle name is used.
+app.setName("Iris");
+
+const iconPath = path.join(repoRoot, "build", "icon.png");
+const appIcon = fs.existsSync(iconPath) ? nativeImage.createFromPath(iconPath) : null;
 
 function loadEnvFile() {
   const envPath = path.join(repoRoot, ".env");
@@ -226,11 +233,15 @@ function buildHermesTools() {
         {
           name: "submit_hermes_task",
           description:
-            "Immediately hand actionable work to Hermes. Invoke for deals, shopping, research, coding, file work, terminal tasks, summaries, automations, or anything requiring tools. Do not ask the user clarifying questions first; pass the user's request through with sensible defaults.",
+            "Immediately hand actionable work to Hermes. Invoke for deals, shopping, research, coding, file work, terminal tasks, summaries, automations, or anything requiring tools. Do not ask the user clarifying questions first. IMPORTANT: Hermes cannot see this voice conversation — the 'task' string is the ONLY context it gets. So you must write a complete, self-contained brief, not a short paraphrase.",
           parameters: {
             type: "object",
             properties: {
-              task: { type: "string", description: "The user's request, verbatim or lightly clarified for Hermes." },
+              task: {
+                type: "string",
+                description:
+                  "A complete, self-contained task brief for Hermes written in clear English. Expand the user's spoken request into a precise instruction: include the goal, every concrete detail the user gave (names, numbers, URLs, dates, budgets, preferences, constraints), any sensible defaults you assumed, and the expected output/format. Do NOT compress it into a few words; write the full task as if Hermes has no prior context.",
+              },
               session_id: { type: "string", description: "Stable session id. Default iris-voice." },
               urgency: { type: "string", description: "low, normal, or high." },
             },
@@ -302,7 +313,8 @@ function buildLiveConfig() {
             "You also have built-in Google Search. Use Google Search directly for quick current facts, simple web lookups, and lightweight questions that do not need Hermes to do work.",
             "CRITICAL: Be decisive. Do not ask clarifying questions for actionable tasks. If Ashutosh asks for a deal, research, coding, checking something, building something, or any work, immediately call submit_hermes_task with his request.",
             "Routing rule: quick answer or fact lookup -> Google Search; multi-step work, monitoring, files, email, deals, coding, automation, or anything that should continue in the background -> Hermes.",
-            "After submit_hermes_task returns, say one short acknowledgement like: On it, Hermes is handling that now.",
+            "When you call submit_hermes_task, write the 'task' as a COMPLETE, self-contained brief. Hermes cannot hear this conversation, so do not send a short paraphrase. Expand what Ashutosh said into a precise, detailed instruction that captures the goal, every concrete detail he mentioned (names, numbers, URLs, dates, budgets, preferences, constraints), any reasonable defaults you are assuming, and the expected result/format. Write it as if Hermes has zero prior context.",
+            "After submit_hermes_task returns, say one short acknowledgement like: On it, Hermes is handling that now. (Keep what you SAY to Ashutosh short, even though the task you SENT to Hermes is detailed.)",
             "When you receive SYSTEM_EVENT_SESSION_START, immediately speak a warm welcome-back greeting to Ashutosh as instructed, without waiting for him to talk first.",
             "When you receive SYSTEM_EVENT_HERMES_COMPLETE, treat it as a high-priority background result from Hermes. Proactively announce it even if the user was chatting with you. Keep it polite and short: say Hermes is back, summarize the result, and ask whether Ashutosh wants to go through it before continuing.",
             "Only answer directly for greetings, quick chat, or status questions.",
@@ -482,6 +494,7 @@ function createWindow() {
     minWidth: 980,
     minHeight: 800,
     backgroundColor: "#050712",
+    ...(appIcon ? { icon: appIcon } : {}),
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 14, y: 14 },
     vibrancy: "under-window",
@@ -496,7 +509,38 @@ function createWindow() {
   else mainWindow.loadURL(devUrl);
 }
 
+function installAppMenu() {
+  if (process.platform !== "darwin") return;
+  app.setAboutPanelOptions({
+    applicationName: "Iris",
+    applicationVersion: app.getVersion(),
+    ...(appIcon ? { iconPath } : {}),
+  });
+  const menu = Menu.buildFromTemplate([
+    {
+      label: "Iris",
+      submenu: [
+        { role: "about" },
+        { type: "separator" },
+        { role: "hide" },
+        { role: "hideOthers" },
+        { role: "unhide" },
+        { type: "separator" },
+        { role: "quit" },
+      ],
+    },
+    { role: "editMenu" },
+    { role: "windowMenu" },
+  ]);
+  Menu.setApplicationMenu(menu);
+}
+
 app.whenReady().then(() => {
+  if (appIcon && process.platform === "darwin" && app.dock) {
+    app.dock.setIcon(appIcon);
+  }
+  installAppMenu();
+
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(permission === "media" || permission === "audioCapture" || permission === "videoCapture");
   });

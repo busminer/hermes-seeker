@@ -45,13 +45,15 @@ type TranscriptLine = {
 const MAX_LOGS = 80;
 const TERMINAL = new Set(["completed", "failed", "cancelled", "canceled", "error"]);
 
-// Static waveform silhouette: taller toward the center, with deterministic
-// per-bar variation so it reads like an audio wave even at rest.
-const PULSE_HEIGHTS = Array.from({ length: 56 }, (_, i) => {
-  const envelope = Math.sin((Math.PI * i) / 55);
-  const variation = 0.4 + 0.6 * Math.abs(Math.sin(i * 12.9898));
-  return Math.max(0.12, envelope * variation);
-});
+// Arc-reactor accent color per state (matches ReactorCore palettes) — drives the
+// surrounding ring/radar so it stays the same color as the orb.
+const ORB_ACCENT: Record<ReactorState, string> = {
+  idle: "120, 170, 150",
+  online: "18, 163, 148",
+  listening: "40, 205, 170",
+  speaking: "238, 122, 92",
+  working: "120, 180, 120",
+};
 
 function eventTime(event: SidecarEvent): number {
   return typeof event.timestamp === "number" ? event.timestamp * 1000 : Date.now();
@@ -150,6 +152,10 @@ export default function App() {
   const outputContextRef = useRef<AudioContext | null>(null);
   const playbackTimeRef = useRef(0);
   const playbackSourcesRef = useRef<AudioBufferSourceNode[]>([]);
+  const inputAnalyserRef = useRef<AnalyserNode | null>(null);
+  const outputAnalyserRef = useRef<AnalyserNode | null>(null);
+  const audioLevelRef = useRef(0);
+  const sessionStartRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!hasBridge) return;
@@ -193,6 +199,30 @@ export default function App() {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
 
+  // Passive audio level meter (mic in / Gemini out) for the reactive HUD.
+  useEffect(() => {
+    let raf = 0;
+    const buf = new Uint8Array(256);
+    const rms = (analyser: AnalyserNode | null) => {
+      if (!analyser) return 0;
+      analyser.getByteTimeDomainData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) {
+        const v = (buf[i] - 128) / 128;
+        sum += v * v;
+      }
+      return Math.sqrt(sum / buf.length);
+    };
+    const tick = () => {
+      const level = Math.max(rms(inputAnalyserRef.current), rms(outputAnalyserRef.current));
+      const boosted = Math.min(1, level * 2.6);
+      audioLevelRef.current += (boosted - audioLevelRef.current) * 0.4;
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   const working = useMemo(
     () => tasks.some((task) => !TERMINAL.has(task.status.toLowerCase())) && tasks.length > 0,
     [tasks],
@@ -232,6 +262,12 @@ export default function App() {
     const source = context.createMediaStreamSource(stream);
     const processor = context.createScriptProcessor(1024, 1, 1);
 
+    // Passive meter tap for the reactive HUD (does not affect what is sent).
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    inputAnalyserRef.current = analyser;
+
     processor.onaudioprocess = (event) => {
       const input = event.inputBuffer.getChannelData(0);
       const output = event.outputBuffer.getChannelData(0);
@@ -265,6 +301,7 @@ export default function App() {
     inputSourceRef.current = null;
     inputStreamRef.current = null;
     inputContextRef.current = null;
+    inputAnalyserRef.current = null;
   }
 
   function flushPlayback() {
@@ -298,9 +335,17 @@ export default function App() {
       channel[i] = view.getInt16(i * 2, true) / 32768;
     }
 
+    let analyser = outputAnalyserRef.current;
+    if (!analyser || analyser.context !== context) {
+      analyser = context.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.connect(context.destination);
+      outputAnalyserRef.current = analyser;
+    }
+
     const source = context.createBufferSource();
     source.buffer = buffer;
-    source.connect(context.destination);
+    source.connect(analyser);
     source.onended = () => {
       playbackSourcesRef.current = playbackSourcesRef.current.filter((item) => item !== source);
     };
@@ -406,6 +451,7 @@ export default function App() {
     const status = await window.iris.startSidecar({ mode: "none" });
     setSidecarRunning(status.running);
     setSidecarPid(status.pid);
+    sessionStartRef.current = Date.now();
     await startAudioCapture();
     setHandControl(true);
   }
@@ -420,6 +466,7 @@ export default function App() {
     setAudioState("idle");
     setMuted(false);
     setHandControl(false);
+    sessionStartRef.current = null;
   }
 
   function dotState(value: string, goodValues: string[]) {
@@ -437,6 +484,7 @@ export default function App() {
   const { state: hand, error: handError, stream: handStream } = useHandControl(handControl);
   const handCamRef = useRef<HTMLVideoElement | null>(null);
   const workScrollRef = useRef<HTMLDivElement | null>(null);
+  const commsScrollRef = useRef<HTMLDivElement | null>(null);
   const liveHandRef = useRef<HandState | null>(hand);
   liveHandRef.current = hand;
 
@@ -470,29 +518,38 @@ export default function App() {
       return;
     }
 
-    if (now - dwellRef.current.startedAt > 850) {
+    if (now - dwellRef.current.startedAt > 300) {
       const task = tasks.find((item) => item.id === taskId);
       if (task) openTask(task);
       dwellRef.current = null;
     }
   }, [handControl, hand.present, hand.point?.x, hand.point?.y, expandedTaskId, tasks]);
 
-  // Open-palm hold-to-scroll for the Work Stream column (same joystick model as
-  // the reader): hold the hand high to scroll up, low to scroll down.
+  // Open-palm hold-to-scroll for whichever scrollable section the hand is over
+  // (Comms or Work Stream): hold the hand high to scroll up, low to scroll down.
   useEffect(() => {
     let raf = 0;
+    const isInside = (el: HTMLElement | null, x: number, y: number) => {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    };
     const loop = () => {
       const h = liveHandRef.current;
-      const body = workScrollRef.current;
-      if (handControl && h?.openPalm && h.point && body && !expandedTaskId && !showHistory) {
-        const rect = body.getBoundingClientRect();
-        const center = rect.top + rect.height / 2;
-        const deadZone = Math.max(40, rect.height * 0.12);
-        const delta = h.point.y - center;
-        if (Math.abs(delta) > deadZone) {
-          const reach = rect.height / 2 - deadZone;
-          const norm = Math.max(-1, Math.min(1, (delta - Math.sign(delta) * deadZone) / reach));
-          body.scrollTop += norm * 26;
+      if (handControl && h?.openPalm && h.point && !expandedTaskId && !showHistory) {
+        const { x, y } = h.point;
+        const body =
+          [commsScrollRef.current, workScrollRef.current].find((el) => isInside(el, x, y)) ?? null;
+        if (body) {
+          const rect = body.getBoundingClientRect();
+          const center = rect.top + rect.height / 2;
+          const deadZone = Math.max(40, rect.height * 0.12);
+          const delta = y - center;
+          if (Math.abs(delta) > deadZone) {
+            const reach = rect.height / 2 - deadZone;
+            const norm = Math.max(-1, Math.min(1, (delta - Math.sign(delta) * deadZone) / reach));
+            body.scrollTop += norm * 26;
+          }
         }
       }
       raf = requestAnimationFrame(loop);
@@ -537,8 +594,6 @@ export default function App() {
     return { text: "Connecting…", dim: true };
   }, [sidecarRunning, audioState, working, transcript, geminiStatus]);
 
-  const pulseActive = sidecarRunning && (audioState === "listening" || audioState === "speaking");
-
   function openTask(task: TaskCard) {
     if (!(task.output || task.error)) return;
     setExpandedTaskId(task.id);
@@ -551,9 +606,10 @@ export default function App() {
 
   return (
     <>
-    <div className="deck">
+    <div className={`deck ${sidecarRunning ? "awake" : "asleep"}`}>
       <div className="hud-aurora" />
       <div className="hud-vignette" />
+      <div className="hud-scanlines" />
 
       <header className="deck-top">
         <div className="deck-top-left">
@@ -605,7 +661,7 @@ export default function App() {
               <MessageSquare size={14} />
               <span>Comms</span>
             </div>
-            <div className="comms-scroll">
+            <div className="comms-scroll" ref={commsScrollRef}>
               {transcript.length === 0 ? (
                 <p className="empty">No conversation yet. Wake Iris and start talking.</p>
               ) : (
@@ -651,16 +707,24 @@ export default function App() {
 
         {/* CENTER — Iris */}
         <div className="deck-center">
-          <div className="orb-stage">
-            <ReactorCore state={reactorState} />
-          </div>
-          <div className={`caption ${caption.dim ? "dim" : ""}`}>{caption.text}</div>
           <div
-            className={`pulse ${pulseActive ? "active" : ""} ${audioState === "speaking" ? "speaking" : ""}`}
+            className="orb-stage"
+            style={{ "--orb-accent": ORB_ACCENT[reactorState] } as CSSProperties}
           >
-            {PULSE_HEIGHTS.map((height, index) => (
-              <span key={index} style={{ "--h": height } as CSSProperties} />
-            ))}
+            <span className="orb-ring" />
+            <span className="orb-radar" />
+            <ReactorCore state={reactorState} levelRef={audioLevelRef} />
+          </div>
+          <Telemetry
+            awake={sidecarRunning}
+            gemini={geminiStatus}
+            hermes={hermesStatus}
+            runs={tasks.length}
+            sessionStartRef={sessionStartRef}
+          />
+          <div className={`caption ${caption.dim ? "dim" : ""}`}>
+            {caption.text}
+            {sidecarRunning ? <span className="caption-caret" /> : null}
           </div>
           {sidecarRunning ? (
             <div className="transport">
@@ -739,7 +803,7 @@ export default function App() {
 
     {handControl && hand.present && hand.point ? (
       <div
-        className={`hand-reticle ${dwellRef.current ? "dwell" : ""} ${hand.openPalm ? "open" : ""} ${hand.fist ? "fist" : ""}`}
+        className={`hand-reticle ${dwellRef.current ? "dwell" : ""} ${hand.pointing ? "pointing" : ""} ${hand.openPalm ? "open" : ""} ${hand.fist ? "fist" : ""}`}
         style={{ transform: `translate(${hand.point.x}px, ${hand.point.y}px)` }}
       >
         <span className="hand-ring" />
@@ -756,6 +820,54 @@ function StatusDot({ tone, state, label }: { tone: string; state: string; label:
       <i />
       {label}
     </span>
+  );
+}
+
+function Telemetry({
+  awake,
+  gemini,
+  hermes,
+  runs,
+  sessionStartRef,
+}: {
+  awake: boolean;
+  gemini: string;
+  hermes: string;
+  runs: number;
+  sessionStartRef: { current: number | null };
+}) {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => force((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const elapsed = awake && sessionStartRef.current ? Date.now() - sessionStartRef.current : 0;
+  const mm = String(Math.floor(elapsed / 60000)).padStart(2, "0");
+  const ss = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, "0");
+
+  return (
+    <div className={`telemetry ${awake ? "live" : ""}`} aria-hidden="true">
+      <span>
+        <i>UPLINK</i>
+        {gemini === "connected" ? "LIVE" : awake ? "SYNC" : "OFFLINE"}
+      </span>
+      <span className="sep">/</span>
+      <span>
+        <i>HERMES</i>
+        {hermes === "ready" ? "READY" : awake ? "···" : "—"}
+      </span>
+      <span className="sep">/</span>
+      <span>
+        <i>RUNS</i>
+        {String(runs).padStart(2, "0")}
+      </span>
+      <span className="sep">/</span>
+      <span>
+        <i>SESSION</i>
+        {mm}:{ss}
+      </span>
+    </div>
   );
 }
 
@@ -945,7 +1057,12 @@ function ExpandedReader({
           <div className="reader-grip" />
           <span className={`badge ${task.status.toLowerCase()}`}>{task.status}</span>
           <code title={task.id}>{shortRunId(task.id)}</code>
-          <button className="reader-close" onClick={closeWithSnap} title="Close">
+          <button
+            className="reader-close"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={closeWithSnap}
+            title="Close"
+          >
             <X size={16} />
           </button>
         </header>

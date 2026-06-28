@@ -329,19 +329,40 @@ button:disabled {
   opacity: 0.4;
 }
 
+/* Pointing — teal/mint ("your" cursor color) */
+.hand-reticle.pointing .hand-ring {
+  border-color: rgba(63, 208, 176, 0.9);
+  box-shadow: 0 0 20px rgba(63, 208, 176, 0.6);
+}
+
+.hand-reticle.pointing .hand-dot {
+  box-shadow: 0 0 12px rgba(63, 208, 176, 0.95);
+}
+
+/* Open palm — cyan/blue (distinct from pointing) */
 .hand-reticle.open .hand-ring {
   width: 72px;
   height: 72px;
   margin: -36px 0 0 -36px;
-  border-color: rgba(140, 200, 160, 0.8);
+  border-color: rgba(91, 188, 255, 0.9);
+  box-shadow: 0 0 20px rgba(91, 188, 255, 0.55);
 }
 
+.hand-reticle.open .hand-dot {
+  box-shadow: 0 0 12px rgba(91, 188, 255, 0.95);
+}
+
+/* Closed fist — amber */
 .hand-reticle.fist .hand-ring {
   width: 22px;
   height: 22px;
   margin: -11px 0 0 -11px;
   border-color: #ffd27a;
   box-shadow: 0 0 18px rgba(200, 160, 60, 0.7);
+}
+
+.hand-reticle.fist .hand-dot {
+  box-shadow: 0 0 12px rgba(255, 210, 122, 0.95);
 }
 
 .hand-hint {

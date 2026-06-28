@@ -1,5 +1,6 @@
 {
   "name": "iris-hermes-voice",
+  "productName": "Iris",
   "version": "0.1.0",
   "private": true,
   "description": "A futuristic Gemini Live voice companion that delegates real work to Hermes.",
