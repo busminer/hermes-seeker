@@ -448,12 +448,20 @@ export default function App() {
       pushLog("error", "Electron bridge unavailable. Launch with `npm run dev`.");
       return;
     }
-    const status = await window.hermesSeeker.startSidecar({ mode: "none" });
-    setSidecarRunning(status.running);
-    setSidecarPid(status.pid);
-    sessionStartRef.current = Date.now();
-    await startAudioCapture();
-    setHandControl(true);
+    try {
+      pushLog("info", "Wake requested. Connecting Gemini Live…");
+      const status = await window.hermesSeeker.startSidecar({ mode: "none" });
+      setSidecarRunning(status.running);
+      setSidecarPid(status.pid);
+      sessionStartRef.current = Date.now();
+      await startAudioCapture();
+      setHandControl(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      pushLog("error", `Wake failed: ${message}`);
+      setGeminiStatus("error");
+      setAudioState("idle");
+    }
   }
 
   async function stop() {
@@ -706,7 +714,7 @@ export default function App() {
         </div>
 
         {/* CENTER — Hermes Seeker */}
-        <div className="deck-center">
+        <div className="deck-center" onClick={() => { if (!sidecarRunning) void start(); }}>
           <div
             className="orb-stage"
             style={{ "--orb-accent": ORB_ACCENT[reactorState] } as CSSProperties}
