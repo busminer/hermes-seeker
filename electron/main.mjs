@@ -9,6 +9,20 @@ const { app, BrowserWindow, ipcMain, session, nativeImage, Menu } = electron;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
+const logPath = path.join(app.getPath("userData"), "hermes-seeker.log");
+
+function logLine(...parts) {
+  const line = `${new Date().toISOString()} ${parts.map((part) =>
+    typeof part === "string" ? part : JSON.stringify(part)
+  ).join(" ")}
+`;
+  try {
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.appendFileSync(logPath, line);
+  } catch {
+    // Logging must never break voice startup.
+  }
+}
 
 // Name the app "Hermes Seeker" (menu bar / about panel). The Dock tile fully reflects this
 // only in a packaged build; in dev the generic Electron bundle name is used.
@@ -63,6 +77,7 @@ function emitToRenderer(channel, payload) {
 }
 
 function emitEvent(event) {
+  logLine("event", event.type, event);
   emitToRenderer("sidecar:event", { timestamp: Date.now() / 1000, ...event });
 }
 
@@ -314,19 +329,16 @@ function buildLiveConfig() {
     },
     inputAudioTranscription: {},
     outputAudioTranscription: {},
-    tools: [
-      { googleSearch: {} },
-      ...buildHermesTools(),
-    ],
+    tools: buildHermesTools(),
     systemInstruction: {
       parts: [
         {
           text: [
             `You are Hermes Seeker, the realtime Seeker-native voice front-end for ${userDisplayName()}.`,
             "Hermes is your worker brain for tools, terminal, files, web, deals, coding, research, and automations.",
-            "You also have built-in Google Search. Use Google Search directly for quick current facts, simple web lookups, and lightweight questions that do not need Hermes to do work.",
+            "Do not use Gemini built-in Google Search in this build; it is disabled because quota-limited keys can close the Live session. Route current facts, web lookups, and real work to Hermes instead.",
             `Be decisive and useful. For safe, clear work, call submit_hermes_task immediately. For vague links/files/repos/context, or risky actions like installs, destructive edits, account connections, credentials, purchases, wallets, or production changes, ask one short clarification/confirmation first.`,
-            "Routing rule: quick answer or fact lookup -> Google Search; multi-step work, monitoring, files, email, deals, coding, automation, or anything that should continue in the background -> Hermes.",
+            "Routing rule: answer simple chat directly; route current facts, web lookups, multi-step work, monitoring, files, email, deals, coding, automation, or anything that should continue in the background -> Hermes.",
             `When you call submit_hermes_task, write the 'task' as a COMPLETE, self-contained brief. Hermes cannot hear this conversation, so do not send a short paraphrase. Expand what ${userDisplayName()} said into a precise, detailed instruction that captures the goal, every concrete detail mentioned (names, numbers, URLs, dates, budgets, preferences, constraints), any reasonable defaults you are assuming, and the expected result/format. Write it as if Hermes has zero prior context.`,
             `After submit_hermes_task returns, say one short acknowledgement like: On it, Hermes is handling that now. (Keep what you SAY to ${userDisplayName()} short, even though the task you SENT to Hermes is detailed.)`,
             `When you receive SYSTEM_EVENT_SESSION_START, immediately speak a warm welcome-back greeting to ${userDisplayName()} as instructed, without waiting for the user to talk first.`,
@@ -365,6 +377,7 @@ function sendWelcomeGreeting() {
 }
 
 async function startLive() {
+  logLine("startLive", "called");
   if (liveSession) return liveStatus;
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -382,6 +395,7 @@ async function startLive() {
     config: buildLiveConfig(),
     callbacks: {
       onopen() {
+        logLine("gemini", "open", model);
         liveStatus = { running: true, pid: process.pid };
         emitEvent({ type: "sidecar_status", status: { running: true, pid: process.pid, model, mode: "webrtc-aec" } });
         emitEvent({ type: "gemini_status", status: "connected", model });
@@ -392,18 +406,27 @@ async function startLive() {
         sendWelcomeGreeting();
       },
       onmessage(message) {
+        logLine("gemini", "message", Object.keys(message || {}));
         handleLiveMessage(message);
       },
       onerror(error) {
-        emitEvent({ type: "fatal", message: "Gemini Live error", error: error?.message || String(error) });
+        const detail = error?.message || String(error);
+        logLine("gemini", "error", detail);
+        emitEvent({ type: "fatal", message: "Gemini Live error", error: detail });
       },
       onclose(event) {
+        const reason = event?.reason || "closed";
+        logLine("gemini", "close", reason);
         flushTranscripts();
         liveSession = null;
         liveStatus = { running: false, pid: null };
-        emitEvent({ type: "gemini_status", status: "offline" });
+        if (reason && reason !== "closed") {
+          emitEvent({ type: "fatal", message: "Gemini Live closed", error: reason });
+        } else {
+          emitEvent({ type: "gemini_status", status: "offline" });
+        }
         emitEvent({ type: "audio_state", state: "idle" });
-        emitEvent({ type: "sidecar_status", status: liveStatus, reason: event?.reason || "closed" });
+        emitEvent({ type: "sidecar_status", status: liveStatus, reason });
       },
     },
   });
