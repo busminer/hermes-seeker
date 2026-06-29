@@ -1,5 +1,5 @@
 ---
-name: Iris Hermes Voice
+name: Iris
 overview: Current implementation snapshot for Iris: a dark-only Electron/React voice companion where Gemini Live handles realtime conversation and delegates long-running work to Hermes through the local API server.
 todos:
   - id: confirm-env

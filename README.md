@@ -1,4 +1,4 @@
-# Iris Hermes Voice
+# Iris
 
 A desktop voice companion that uses **Gemini Live** for natural realtime conversation and **Hermes Agent** for long-running work.
 
