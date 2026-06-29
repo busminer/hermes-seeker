@@ -143,7 +143,7 @@ export default function App() {
   const [muted, setMuted] = useState(false);
   const [handControl, setHandControl] = useState(false);
 
-  const hasBridge = typeof window.iris !== "undefined";
+  const hasBridge = typeof window.hermesSeeker !== "undefined";
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const inputContextRef = useRef<AudioContext | null>(null);
   const inputStreamRef = useRef<MediaStream | null>(null);
@@ -159,17 +159,17 @@ export default function App() {
 
   useEffect(() => {
     if (!hasBridge) return;
-    window.iris.getSidecarStatus().then((status) => {
+    window.hermesSeeker.getSidecarStatus().then((status) => {
       setSidecarRunning(status.running);
       setSidecarPid(status.pid);
     });
-    return window.iris.onSidecarEvent((event) => handleSidecarEvent(event));
+    return window.hermesSeeker.onSidecarEvent((event) => handleSidecarEvent(event));
   }, [hasBridge]);
 
   useEffect(() => {
     if (!hasBridge) return;
-    const offAudio = window.iris.onAudioChunk((chunk) => playGeminiAudio(chunk));
-    const offInterrupt = window.iris.onAudioInterrupt(() => flushPlayback());
+    const offAudio = window.hermesSeeker.onAudioChunk((chunk) => playGeminiAudio(chunk));
+    const offInterrupt = window.hermesSeeker.onAudioInterrupt(() => flushPlayback());
     return () => {
       offAudio();
       offInterrupt();
@@ -277,7 +277,7 @@ export default function App() {
       if (pcm.byteLength > 0) {
         const chunk = new ArrayBuffer(pcm.byteLength);
         new Uint8Array(chunk).set(new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength));
-        window.iris.sendAudioChunk(chunk);
+        window.hermesSeeker.sendAudioChunk(chunk);
       }
     };
 
@@ -448,7 +448,7 @@ export default function App() {
       pushLog("error", "Electron bridge unavailable. Launch with `npm run dev`.");
       return;
     }
-    const status = await window.iris.startSidecar({ mode: "none" });
+    const status = await window.hermesSeeker.startSidecar({ mode: "none" });
     setSidecarRunning(status.running);
     setSidecarPid(status.pid);
     sessionStartRef.current = Date.now();
@@ -460,7 +460,7 @@ export default function App() {
     if (!hasBridge) return;
     await stopAudioCapture();
     flushPlayback();
-    await window.iris.stopSidecar();
+    await window.hermesSeeker.stopSidecar();
     setGeminiStatus("offline");
     setHermesStatus("offline");
     setAudioState("idle");
@@ -584,7 +584,7 @@ export default function App() {
   }, [tasks]);
 
   const caption = useMemo(() => {
-    if (!sidecarRunning) return { text: "Press W to wake Iris", dim: true };
+    if (!sidecarRunning) return { text: "Press W to wake Hermes Seeker", dim: true };
     if (audioState === "speaking") return { text: "Speaking…", dim: false };
     if (audioState === "listening") return { text: "Listening…", dim: false };
     if (working) return { text: "Working on it…", dim: false };
@@ -634,7 +634,7 @@ export default function App() {
           </div>
         </div>
         <div className="deck-brand">
-          <span className="brand-mark">I.R.I.S</span>
+          <span className="brand-mark">SEEKER</span>
         </div>
         <div className="deck-top-right">
           <button
@@ -663,13 +663,13 @@ export default function App() {
             </div>
             <div className="comms-scroll" ref={commsScrollRef}>
               {transcript.length === 0 ? (
-                <p className="empty">No conversation yet. Wake Iris and start talking.</p>
+                <p className="empty">No conversation yet. Wake Hermes Seeker and start talking.</p>
               ) : (
                 transcript.map((line) => {
                   const self = /you|user/i.test(line.speaker);
                   return (
-                    <div className={`bubble ${self ? "self" : "iris"}`} key={line.id}>
-                      <span className="who">{self ? "You" : "Iris"}</span>
+                    <div className={`bubble ${self ? "self" : "seeker"}`} key={line.id}>
+                      <span className="who">{self ? "You" : "Hermes Seeker"}</span>
                       {line.text}
                     </div>
                   );
@@ -705,7 +705,7 @@ export default function App() {
           </section>
         </div>
 
-        {/* CENTER — Iris */}
+        {/* CENTER — Hermes Seeker */}
         <div className="deck-center">
           <div
             className="orb-stage"
@@ -760,7 +760,7 @@ export default function App() {
           </div>
           <div className="work-scroll" ref={workScrollRef}>
             {tasks.length === 0 ? (
-              <p className="empty">No Hermes runs yet. Ask Iris to take on a task.</p>
+              <p className="empty">No Hermes runs yet. Ask Hermes Seeker to take on a task.</p>
             ) : (
               sortedTasks.map((task) => (
                 <WorkCard key={task.id} task={task} onOpen={() => openTask(task)} />
@@ -772,12 +772,12 @@ export default function App() {
 
       <footer className="deck-foot">
         <span className="build-meta">
-          IRIS · build 0.1.0 · by Ashutosh Shrivastava ·{" "}
+          HERMES SEEKER · build 0.1.0 · fork by Alex Kosa ·{" "}
           <a href="https://x.com/ai_for_success" target="_blank" rel="noreferrer">
             X
           </a>{" "}
           ·{" "}
-          <a href="https://github.com/ASHR12/iris" target="_blank" rel="noreferrer">
+          <a href="https://github.com/busminer/hermes-seeker" target="_blank" rel="noreferrer">
             GitHub
           </a>
         </span>

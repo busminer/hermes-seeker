@@ -1,17 +1,17 @@
 {
-  "name": "iris-hermes-voice",
-  "productName": "Iris",
+  "name": "hermes-seeker",
+  "productName": "Hermes Seeker",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
-  "description": "A futuristic Gemini Live voice companion that delegates real work to Hermes.",
-  "homepage": "https://github.com/ASHR12/iris#readme",
+  "description": "A Seeker-native Gemini Live voice companion that delegates real work to Hermes Agent.",
+  "homepage": "https://github.com/busminer/hermes-seeker#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ASHR12/iris.git"
+    "url": "git+https://github.com/busminer/hermes-seeker.git"
   },
   "bugs": {
-    "url": "https://github.com/ASHR12/iris/issues"
+    "url": "https://github.com/busminer/hermes-seeker/issues"
   },
   "type": "module",
   "main": "electron/main.mjs",
@@ -51,8 +51,8 @@
     "wait-on": "latest"
   },
   "build": {
-    "appId": "app.iris.voice",
-    "productName": "Iris",
+    "appId": "app.hermes.seeker",
+    "productName": "Hermes Seeker",
     "directories": {
       "output": "release",
       "buildResources": "build"

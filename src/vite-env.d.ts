@@ -13,7 +13,7 @@ type LiveAudioChunk = {
   mimeType?: string;
 };
 
-type IrisApi = {
+type HermesSeekerApi = {
   startSidecar: (options?: { mode?: SidecarMode }) => Promise<{ running: boolean; pid: number | null }>;
   stopSidecar: () => Promise<{ running: boolean; pid: number | null }>;
   getSidecarStatus: () => Promise<{ running: boolean; pid: number | null }>;
@@ -25,5 +25,5 @@ type IrisApi = {
 };
 
 interface Window {
-  iris: IrisApi;
+  hermesSeeker: HermesSeekerApi;
 }

@@ -1,4 +1,4 @@
-# Iris
+# Hermes Seeker
 
 A desktop voice companion that uses **Gemini Live** for natural realtime conversation and **Hermes Agent** for long-running work.
 
@@ -321,7 +321,7 @@ Your Hermes config should enable the local API server. Add this to
 
 ```bash
 API_SERVER_ENABLED=true
-API_SERVER_KEY=iris-local-dev
+API_SERVER_KEY=hermes-seeker-local-dev
 ```
 
 Restart Hermes gateway after changing this:
@@ -344,11 +344,11 @@ Expected output:
 
 ## App Environment
 
-Iris reads environment values from:
+Hermes Seeker reads environment values from:
 
 1. `.env` in this repo (development and `npm start`).
-2. `~/.iris/.env` (packaged app on macOS/Linux).
-3. `%USERPROFILE%\\.iris\\.env` (packaged app on Windows).
+2. `~/.hermes-seeker/.env` (packaged app on macOS/Linux).
+3. `%USERPROFILE%\\.hermes-seeker\\.env` (packaged app on Windows).
 4. `.env` bundled next to app resources (optional packaging flow).
 
 Copy the example file:
@@ -373,15 +373,15 @@ Recommended example:
 
 ```bash
 GEMINI_API_KEY=your_google_ai_studio_key
-IRIS_USER_NAME=there
+SEEKER_USER_NAME=Alex
 GEMINI_LIVE_MODEL=models/gemini-3.1-flash-live-preview
 GEMINI_LIVE_VOICE=Zephyr
 HERMES_API_URL=http://127.0.0.1:8642
-API_SERVER_KEY=iris-local-dev
+API_SERVER_KEY=hermes-seeker-local-dev
 ```
 
 `HERMES_BIN` is optional. Set it only if the packaged GUI app cannot find the
-Hermes binary on PATH. If the Hermes gateway is already running, Iris only needs
+Hermes binary on PATH. If the Hermes gateway is already running, Hermes Seeker only needs
 `HERMES_API_URL` and `API_SERVER_KEY`.
 
 ## Exact Google Models, SDKs & Assets (pinned reference)
@@ -435,7 +435,7 @@ so future changes don't reintroduce wrong/deprecated names or version drift.
 npm install
 ```
 
-### 2. Configure Gemini and Iris
+### 2. Configure Gemini and Hermes Seeker
 
 Create `.env` from `.env.example` and set at least `GEMINI_API_KEY`.
 
@@ -445,7 +445,7 @@ Make sure Hermes API is enabled:
 
 ```bash
 echo 'API_SERVER_ENABLED=true' >> ~/.hermes/.env
-echo 'API_SERVER_KEY=iris-local-dev' >> ~/.hermes/.env
+echo 'API_SERVER_KEY=hermes-seeker-local-dev' >> ~/.hermes/.env
 hermes gateway restart
 ```
 
@@ -453,7 +453,7 @@ On Windows, edit your Hermes env file manually and add the same two values:
 
 ```env
 API_SERVER_ENABLED=true
-API_SERVER_KEY=iris-local-dev
+API_SERVER_KEY=hermes-seeker-local-dev
 ```
 
 Then restart Hermes gateway.
@@ -477,7 +477,7 @@ npm run dev
 ```
 
 This starts Vite and Electron with hot reload. In dev mode the macOS Dock may
-show the generic Electron app name, but the packaged app is named Iris.
+show the generic Electron app name, but the packaged app is named Hermes Seeker.
 
 ### 5. Run a production build without packaging
 
@@ -505,7 +505,7 @@ npm run build
 
 ```bash
 npm run package:mac
-open release/mac-arm64/Iris.app
+open release/mac-arm64/Hermes Seeker.app
 ```
 
 The app is unsigned by default. If macOS blocks it, right-click the app and choose
@@ -537,7 +537,7 @@ npm run dist:win
 For the packaged Windows app, copy `.env.example` to:
 
 ```text
-%USERPROFILE%\\.iris\\.env
+%USERPROFILE%\\.hermes-seeker\\.env
 ```
 
 Then set `GEMINI_API_KEY` and Hermes values there.
@@ -575,7 +575,7 @@ Camera/gesture behavior:
 ## Open-Source Notes
 
 - `.env` is ignored. Do not commit real Gemini keys or Hermes API keys.
-- The default `API_SERVER_KEY=iris-local-dev` is for local development only; choose
+- The default `API_SERVER_KEY=hermes-seeker-local-dev` is for local development only; choose
   your own local key if you share the app broadly.
 - The packaged app is unsigned unless you add your own Apple/Windows signing
   certificates.

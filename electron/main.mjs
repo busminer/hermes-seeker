@@ -10,9 +10,9 @@ const { app, BrowserWindow, ipcMain, session, nativeImage, Menu } = electron;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
 
-// Name the app "Iris" (menu bar / about panel). The Dock tile fully reflects this
+// Name the app "Hermes Seeker" (menu bar / about panel). The Dock tile fully reflects this
 // only in a packaged build; in dev the generic Electron bundle name is used.
-app.setName("Iris");
+app.setName("Hermes Seeker");
 
 const iconPath = path.join(repoRoot, "build", "icon.png");
 const appIcon = fs.existsSync(iconPath) ? nativeImage.createFromPath(iconPath) : null;
@@ -36,11 +36,11 @@ function parseEnvFile(envPath) {
 }
 
 // Look for .env in several places so both the dev repo run and a packaged
-// Iris.app can find credentials. First match for a given key wins.
+// Hermes Seeker can find credentials. First match for a given key wins.
 function loadEnvFile() {
   const candidates = [
     path.join(repoRoot, ".env"),
-    path.join(os.homedir(), ".iris", ".env"),
+    path.join(os.homedir(), ".hermes-seeker", ".env"),
     process.resourcesPath ? path.join(process.resourcesPath, ".env") : null,
   ];
   for (const candidate of candidates) parseEnvFile(candidate);
@@ -83,13 +83,13 @@ function hermesBaseUrl() {
 
 function hermesHeaders() {
   return {
-    Authorization: `Bearer ${process.env.API_SERVER_KEY || "iris-local-dev"}`,
+    Authorization: `Bearer ${process.env.API_SERVER_KEY || "hermes-seeker-local-dev"}`,
     "Content-Type": "application/json",
   };
 }
 
 function userDisplayName() {
-  return (process.env.IRIS_USER_NAME || process.env.USER || process.env.USERNAME || "there").trim();
+  return (process.env.SEEKER_USER_NAME || process.env.USER || process.env.USERNAME || "Alex").trim();
 }
 
 async function hermesRequest(method, pathName, body = undefined) {
@@ -124,7 +124,7 @@ async function checkHermesStatus() {
   }
 }
 
-async function submitHermesTask({ task, session_id = "iris-voice", urgency = "normal" }) {
+async function submitHermesTask({ task, session_id = "hermes-seeker-voice", urgency = "normal" }) {
   if (!task || !String(task).trim()) {
     return { status: "error", error: "Task is required." };
   }
@@ -134,7 +134,7 @@ async function submitHermesTask({ task, session_id = "iris-voice", urgency = "no
     input: cleanTask,
     session_id,
     instructions:
-      "You are invoked from Iris voice. Work autonomously. Do not ask Iris for clarification unless absolutely impossible. Use sensible defaults and report concise final results.",
+      "You are invoked from Hermes Seeker voice. Work autonomously for safe, reversible tasks. If the user shares a vague link/file/repo/context, clarify the desired outcome before installing, changing, deleting, connecting accounts, spending money, or doing security-sensitive actions. Report concise final results.",
   });
   const runId = run.run_id || run.id;
   emitEvent({ type: "hermes_task_update", status: "started", task: cleanTask, run_id: runId, urgency });
@@ -210,7 +210,7 @@ function announceHermesCompletion({ runId, task, status, output }) {
     `run_id: ${runId}`,
     `status: ${status}`,
     `original_task: ${task}`,
-    "instructions_to_iris:",
+    "instructions_to_hermes_seeker:",
     `- Proactively tell ${userDisplayName()} Hermes has returned.`,
     "- If another conversation is in progress, politely pause it with a short bridge like: Quick update, Hermes is back with a result.",
     "- Give a concise spoken summary in 1-3 sentences.",
@@ -256,7 +256,7 @@ function buildHermesTools() {
                 description:
                   "A complete, self-contained task brief for Hermes written in clear English. Expand the user's spoken request into a precise instruction: include the goal, every concrete detail the user gave (names, numbers, URLs, dates, budgets, preferences, constraints), any sensible defaults you assumed, and the expected output/format. Do NOT compress it into a few words; write the full task as if Hermes has no prior context.",
               },
-              session_id: { type: "string", description: "Stable session id. Default iris-voice." },
+              session_id: { type: "string", description: "Stable session id. Default hermes-seeker-voice." },
               urgency: { type: "string", description: "low, normal, or high." },
             },
             required: ["task"],
@@ -322,16 +322,16 @@ function buildLiveConfig() {
       parts: [
         {
           text: [
-            `You are Iris, the realtime voice front-end for ${userDisplayName()}.`,
+            `You are Hermes Seeker, the realtime Seeker-native voice front-end for ${userDisplayName()}.`,
             "Hermes is your worker brain for tools, terminal, files, web, deals, coding, research, and automations.",
             "You also have built-in Google Search. Use Google Search directly for quick current facts, simple web lookups, and lightweight questions that do not need Hermes to do work.",
-            `CRITICAL: Be decisive. Do not ask clarifying questions for actionable tasks. If ${userDisplayName()} asks for a deal, research, coding, checking something, building something, or any work, immediately call submit_hermes_task with the request.`,
+            `Be decisive and useful. For safe, clear work, call submit_hermes_task immediately. For vague links/files/repos/context, or risky actions like installs, destructive edits, account connections, credentials, purchases, wallets, or production changes, ask one short clarification/confirmation first.`,
             "Routing rule: quick answer or fact lookup -> Google Search; multi-step work, monitoring, files, email, deals, coding, automation, or anything that should continue in the background -> Hermes.",
             `When you call submit_hermes_task, write the 'task' as a COMPLETE, self-contained brief. Hermes cannot hear this conversation, so do not send a short paraphrase. Expand what ${userDisplayName()} said into a precise, detailed instruction that captures the goal, every concrete detail mentioned (names, numbers, URLs, dates, budgets, preferences, constraints), any reasonable defaults you are assuming, and the expected result/format. Write it as if Hermes has zero prior context.`,
             `After submit_hermes_task returns, say one short acknowledgement like: On it, Hermes is handling that now. (Keep what you SAY to ${userDisplayName()} short, even though the task you SENT to Hermes is detailed.)`,
             `When you receive SYSTEM_EVENT_SESSION_START, immediately speak a warm welcome-back greeting to ${userDisplayName()} as instructed, without waiting for the user to talk first.`,
             `When you receive SYSTEM_EVENT_HERMES_COMPLETE, treat it as a high-priority background result from Hermes. Proactively announce it even if ${userDisplayName()} was chatting with you. Keep it polite and short: say Hermes is back, summarize the result, and ask whether they want to go through it before continuing.`,
-            "Only answer directly for greetings, quick chat, or status questions.",
+            "Answer directly for greetings, quick chat, status questions, or when the safest next step is a brief clarification.",
             "Keep voice responses natural and short.",
           ].join("\n"),
         },
@@ -357,7 +357,7 @@ function sendWelcomeGreeting() {
 
     const greeting =
       `SYSTEM_EVENT_SESSION_START: The session just started. Proactively greet ${userDisplayName()} out loud right now in a warm, concise way (1-2 sentences). ` +
-      `Say something like: Hi ${userDisplayName()}, welcome back. ${hermesLine} Then ask what they have in mind. ` +
+      `Say something like: Hey ${userDisplayName()}, Hermes Seeker is awake. ${hermesLine} Then ask what they want to hunt down next. ` +
       "Speak this greeting immediately without waiting for the user to talk first.";
 
     liveSession.sendRealtimeInput({ text: greeting });
@@ -495,7 +495,7 @@ function sendCommand(command) {
     liveSession.sendRealtimeInput({ text: command.text });
   }
   if (command?.type === "submit_hermes_task" && command.task) {
-    submitHermesTask({ task: command.task, session_id: command.session_id || "iris-voice" }).catch((error) => {
+    submitHermesTask({ task: command.task, session_id: command.session_id || "hermes-seeker-voice" }).catch((error) => {
       emitEvent({ type: "hermes_task_update", status: "error", task: command.task, error: error.message });
     });
   }
@@ -519,7 +519,7 @@ function createWindow() {
     },
   });
   const devUrl = process.env.VITE_DEV_SERVER_URL ?? "http://127.0.0.1:5173";
-  const useProd = app.isPackaged || process.env.IRIS_START_PROD === "1";
+  const useProd = app.isPackaged || process.env.SEEKER_START_PROD || process.env.IRIS_START_PROD === "1";
   if (useProd) mainWindow.loadFile(path.join(repoRoot, "dist", "index.html"));
   else mainWindow.loadURL(devUrl);
 }
@@ -527,13 +527,13 @@ function createWindow() {
 function installAppMenu() {
   if (process.platform !== "darwin") return;
   app.setAboutPanelOptions({
-    applicationName: "Iris",
+    applicationName: "Hermes Seeker",
     applicationVersion: app.getVersion(),
     ...(appIcon ? { iconPath } : {}),
   });
   const menu = Menu.buildFromTemplate([
     {
-      label: "Iris",
+      label: "Hermes Seeker",
       submenu: [
         { role: "about" },
         { type: "separator" },

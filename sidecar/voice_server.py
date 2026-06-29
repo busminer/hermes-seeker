@@ -57,7 +57,7 @@ def load_env_file() -> None:
 load_env_file()
 
 SYSTEM_INSTRUCTION = """
-You are Iris, the realtime voice front-end for the user. Your brain and hands
+You are Hermes Seeker, the realtime voice front-end for the user. Your brain and hands
 are Hermes, an autonomous agent that can use the terminal, files, web search,
 browsing, code, and automations. You are calm, futuristic, and extremely concise.
 
@@ -215,7 +215,7 @@ class AudioLoop:
         self._user_buf = ""
         self._gemini_buf = ""
 
-        hermes_key = os.environ.get("API_SERVER_KEY", "iris-local-dev")
+        hermes_key = os.environ.get("API_SERVER_KEY", "hermes-seeker-local-dev")
         hermes_url = os.environ.get("HERMES_API_URL", "http://127.0.0.1:8642")
         self.hermes = HermesClient(base_url=hermes_url, api_key=hermes_key)
         self.hermes_process = HermesProcessManager(self.hermes)
@@ -327,7 +327,7 @@ class AudioLoop:
             kind = msg.get("kind")
             blob = types.Blob(data=msg["data"], mime_type=msg["mime_type"])
             if kind == "audio":
-                # Laptop-speaker mode: do not forward mic audio while Iris is
+                # Laptop-speaker mode: do not forward mic audio while Hermes Seeker is
                 # speaking, otherwise Gemini hears its own voice and self-interrupts.
                 # Set VOICE_DUPLEX_MODE=headphones to allow full barge-in.
                 if self.duplex_mode != "headphones" and self._speaker_echo_window_open():
@@ -477,7 +477,7 @@ class AudioLoop:
             if command_type == "text" and self.session is not None:
                 await self.session.send_realtime_input(text=command.get("text", "."))
             if command_type == "submit_hermes_task":
-                await self.submit_hermes_task(command.get("task", ""), command.get("session_id", "iris-voice"))
+                await self.submit_hermes_task(command.get("task", ""), command.get("session_id", "hermes-seeker-voice"))
 
     async def handle_tool_call(self, tool_call: Any) -> None:
         function_responses = []
@@ -507,7 +507,7 @@ class AudioLoop:
         if name == "submit_hermes_task":
             return await self.submit_hermes_task(
                 args.get("task", ""),
-                args.get("session_id") or "iris-voice",
+                args.get("session_id") or "hermes-seeker-voice",
                 args.get("urgency") or "normal",
             )
         if name == "get_hermes_task_status":
@@ -521,7 +521,7 @@ class AudioLoop:
     async def submit_hermes_task(
         self,
         task: str,
-        session_id: str = "iris-voice",
+        session_id: str = "hermes-seeker-voice",
         urgency: str = "normal",
     ) -> dict[str, Any]:
         if not task.strip():

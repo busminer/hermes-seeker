@@ -14,7 +14,7 @@ class HermesError(RuntimeError):
 @dataclass
 class HermesClient:
     base_url: str = "http://127.0.0.1:8642"
-    api_key: str = "iris-local-dev"
+    api_key: str = "hermes-seeker-local-dev"
     timeout: float = 10.0
 
     def _url(self, path: str) -> str:
@@ -62,7 +62,7 @@ class HermesClient:
     def start_run(
         self,
         task: str,
-        session_id: str = "iris-voice",
+        session_id: str = "hermes-seeker-voice",
         instructions: str | None = None,
     ) -> dict[str, Any]:
         body: dict[str, Any] = {

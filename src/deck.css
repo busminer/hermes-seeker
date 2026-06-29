@@ -1,5 +1,5 @@
 /* ===== Orbital Deck layout =====
-   Mental model: LEFT = You · CENTER = Iris · RIGHT = Work.
+   Mental model: LEFT = You · CENTER = Hermes Seeker · RIGHT = Work.
    Reuses the color variables, aurora, reader, badge, status-dot, hand-reticle,
    and boot styles defined in App.css. */
 
@@ -176,7 +176,7 @@
   margin-bottom: 3px;
 }
 
-.bubble.iris {
+.bubble.seeker {
   align-self: flex-start;
   background: rgba(18, 163, 148, 0.12);
   border-bottom-left-radius: 6px;
@@ -293,7 +293,7 @@
   background: var(--panel);
 }
 
-/* ===== Center column: Iris ===== */
+/* ===== Center column: Hermes Seeker ===== */
 .deck-center {
   position: relative;
   display: flex;
@@ -713,7 +713,7 @@
 }
 
 [data-theme="dark"] .bubble.self { background: rgba(120, 220, 200, 0.07); }
-[data-theme="dark"] .bubble.iris { background: rgba(43, 208, 189, 0.12); }
+[data-theme="dark"] .bubble.seeker { background: rgba(43, 208, 189, 0.12); }
 [data-theme="dark"] .wcard { background: rgba(120, 220, 200, 0.06); }
 
 [data-theme="dark"] .t-btn {

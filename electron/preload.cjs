@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld("iris", {
+contextBridge.exposeInMainWorld("hermesSeeker", {
   startSidecar: (options) => ipcRenderer.invoke("sidecar:start", options),
   stopSidecar: () => ipcRenderer.invoke("sidecar:stop"),
   getSidecarStatus: () => ipcRenderer.invoke("sidecar:status"),
