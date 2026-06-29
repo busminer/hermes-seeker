@@ -88,6 +88,10 @@ function hermesHeaders() {
   };
 }
 
+function userDisplayName() {
+  return (process.env.IRIS_USER_NAME || process.env.USER || process.env.USERNAME || "there").trim();
+}
+
 async function hermesRequest(method, pathName, body = undefined) {
   const response = await fetch(`${hermesBaseUrl()}${pathName}`, {
     method,
@@ -207,7 +211,7 @@ function announceHermesCompletion({ runId, task, status, output }) {
     `status: ${status}`,
     `original_task: ${task}`,
     "instructions_to_iris:",
-    "- Proactively tell Ashutosh Hermes has returned.",
+    `- Proactively tell ${userDisplayName()} Hermes has returned.`,
     "- If another conversation is in progress, politely pause it with a short bridge like: Quick update, Hermes is back with a result.",
     "- Give a concise spoken summary in 1-3 sentences.",
     "- Ask whether he wants to go through the details before continuing the current conversation.",
@@ -318,15 +322,15 @@ function buildLiveConfig() {
       parts: [
         {
           text: [
-            "You are Iris, the realtime voice front-end for Ashutosh.",
+            `You are Iris, the realtime voice front-end for ${userDisplayName()}.`,
             "Hermes is your worker brain for tools, terminal, files, web, deals, coding, research, and automations.",
             "You also have built-in Google Search. Use Google Search directly for quick current facts, simple web lookups, and lightweight questions that do not need Hermes to do work.",
-            "CRITICAL: Be decisive. Do not ask clarifying questions for actionable tasks. If Ashutosh asks for a deal, research, coding, checking something, building something, or any work, immediately call submit_hermes_task with his request.",
+            `CRITICAL: Be decisive. Do not ask clarifying questions for actionable tasks. If ${userDisplayName()} asks for a deal, research, coding, checking something, building something, or any work, immediately call submit_hermes_task with the request.`,
             "Routing rule: quick answer or fact lookup -> Google Search; multi-step work, monitoring, files, email, deals, coding, automation, or anything that should continue in the background -> Hermes.",
-            "When you call submit_hermes_task, write the 'task' as a COMPLETE, self-contained brief. Hermes cannot hear this conversation, so do not send a short paraphrase. Expand what Ashutosh said into a precise, detailed instruction that captures the goal, every concrete detail he mentioned (names, numbers, URLs, dates, budgets, preferences, constraints), any reasonable defaults you are assuming, and the expected result/format. Write it as if Hermes has zero prior context.",
-            "After submit_hermes_task returns, say one short acknowledgement like: On it, Hermes is handling that now. (Keep what you SAY to Ashutosh short, even though the task you SENT to Hermes is detailed.)",
-            "When you receive SYSTEM_EVENT_SESSION_START, immediately speak a warm welcome-back greeting to Ashutosh as instructed, without waiting for him to talk first.",
-            "When you receive SYSTEM_EVENT_HERMES_COMPLETE, treat it as a high-priority background result from Hermes. Proactively announce it even if the user was chatting with you. Keep it polite and short: say Hermes is back, summarize the result, and ask whether Ashutosh wants to go through it before continuing.",
+            `When you call submit_hermes_task, write the 'task' as a COMPLETE, self-contained brief. Hermes cannot hear this conversation, so do not send a short paraphrase. Expand what ${userDisplayName()} said into a precise, detailed instruction that captures the goal, every concrete detail mentioned (names, numbers, URLs, dates, budgets, preferences, constraints), any reasonable defaults you are assuming, and the expected result/format. Write it as if Hermes has zero prior context.`,
+            `After submit_hermes_task returns, say one short acknowledgement like: On it, Hermes is handling that now. (Keep what you SAY to ${userDisplayName()} short, even though the task you SENT to Hermes is detailed.)`,
+            `When you receive SYSTEM_EVENT_SESSION_START, immediately speak a warm welcome-back greeting to ${userDisplayName()} as instructed, without waiting for the user to talk first.`,
+            `When you receive SYSTEM_EVENT_HERMES_COMPLETE, treat it as a high-priority background result from Hermes. Proactively announce it even if ${userDisplayName()} was chatting with you. Keep it polite and short: say Hermes is back, summarize the result, and ask whether they want to go through it before continuing.`,
             "Only answer directly for greetings, quick chat, or status questions.",
             "Keep voice responses natural and short.",
           ].join("\n"),
@@ -352,9 +356,9 @@ function sendWelcomeGreeting() {
       : "I'm still bringing Hermes online, channels are connecting now.";
 
     const greeting =
-      "SYSTEM_EVENT_SESSION_START: The session just started. Proactively greet Ashutosh out loud right now in a warm, concise way (1-2 sentences). " +
-      `Say something like: Hi Ashutosh, welcome back. ${hermesLine} Then ask what he has in mind. ` +
-      "Speak this greeting immediately without waiting for him to talk first.";
+      `SYSTEM_EVENT_SESSION_START: The session just started. Proactively greet ${userDisplayName()} out loud right now in a warm, concise way (1-2 sentences). ` +
+      `Say something like: Hi ${userDisplayName()}, welcome back. ${hermesLine} Then ask what they have in mind. ` +
+      "Speak this greeting immediately without waiting for the user to talk first.";
 
     liveSession.sendRealtimeInput({ text: greeting });
   })();

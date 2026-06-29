@@ -14,7 +14,7 @@ The app is designed as a voice-first front-end: you speak naturally, Gemini Live
 - Shows conversation in the Comms panel and Hermes jobs in the Hermes Tasks panel.
 - Proactively announces Hermes results when a background task finishes.
 - Supports interruption/barge-in: when you speak over Gemini, playback is flushed.
-- Uses a dark-only "Orbital Deck" UI with an animated voice orb, waveform, keyboard shortcuts, Comms, Camera/Gesture, and Work Stream columns.
+- Uses a dark-only "Orbital Deck" UI with an animated voice orb, keyboard shortcuts, Comms, Camera/Gesture, and Work Stream columns.
 - Adds **camera hand-gesture control** (MediaPipe) after wake so you can drive the UI in the air: point to move a cursor, dwell to open a task, open-palm to scroll, and make a fist to dismiss.
 - Uses a simple polished reader open/close animation for expanded Hermes results.
 
@@ -272,7 +272,7 @@ flowchart TD
   StableGesture --> HandState
   HandState --> AppUI["App.tsx interactions"]
 
-  AppUI -->|"Pointing_Up + dwell 850ms"| OpenCard["Open task card"]
+  AppUI -->|"Pointing_Up + brief dwell"| OpenCard["Open task card"]
   AppUI -->|"Open_Palm"| Scroll["Hold-to-scroll reader"]
   AppUI -->|"Closed_Fist"| Close["Close reader"]
 ```
@@ -310,13 +310,14 @@ Routing behavior:
 
 ## Hermes Requirements
 
-The app expects Hermes API server to be reachable at:
+The app expects the Hermes API server to be reachable at:
 
 ```text
 http://127.0.0.1:8642
 ```
 
-Your `~/.hermes/.env` should include:
+Your Hermes config should enable the local API server. Add this to
+`~/.hermes/.env` (macOS/Linux) or the equivalent Hermes env file on Windows:
 
 ```bash
 API_SERVER_ENABLED=true
@@ -341,20 +342,47 @@ Expected output:
 {"status":"ok"}
 ```
 
-## Local App Environment
+## App Environment
 
-The app reads `.env` in this repo.
+Iris reads environment values from:
 
-Example:
+1. `.env` in this repo (development and `npm start`).
+2. `~/.iris/.env` (packaged app on macOS/Linux).
+3. `%USERPROFILE%\\.iris\\.env` (packaged app on Windows).
+4. `.env` bundled next to app resources (optional packaging flow).
+
+Copy the example file:
+
+```bash
+cp .env.example .env
+```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Minimum required:
 
 ```bash
 GEMINI_API_KEY=your_google_ai_studio_key
+```
+
+Recommended example:
+
+```bash
+GEMINI_API_KEY=your_google_ai_studio_key
+IRIS_USER_NAME=there
 GEMINI_LIVE_MODEL=models/gemini-3.1-flash-live-preview
 GEMINI_LIVE_VOICE=Zephyr
 HERMES_API_URL=http://127.0.0.1:8642
 API_SERVER_KEY=iris-local-dev
-HERMES_BIN=/Users/you/.local/bin/hermes
 ```
+
+`HERMES_BIN` is optional. Set it only if the packaged GUI app cannot find the
+Hermes binary on PATH. If the Hermes gateway is already running, Iris only needs
+`HERMES_API_URL` and `API_SERVER_KEY`.
 
 ## Exact Google Models, SDKs & Assets (pinned reference)
 
@@ -391,25 +419,128 @@ so future changes don't reintroduce wrong/deprecated names or version drift.
 - **Send realtime input with `sendRealtimeInput`** (not the deprecated
   `media_chunks` path) for audio/text streaming.
 
-## Setup
+## Setup From Source
 
-Install Node dependencies:
+### Prerequisites
+
+- Node.js 20+ (LTS recommended).
+- npm.
+- Hermes Agent installed and able to run `hermes gateway`.
+- A Gemini API key for the Live model (`GEMINI_API_KEY`).
+- macOS, Windows, or Linux with microphone permission available.
+
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-Run the app:
+### 2. Configure Gemini and Iris
+
+Create `.env` from `.env.example` and set at least `GEMINI_API_KEY`.
+
+### 3. Enable Hermes gateway API
+
+Make sure Hermes API is enabled:
+
+```bash
+echo 'API_SERVER_ENABLED=true' >> ~/.hermes/.env
+echo 'API_SERVER_KEY=iris-local-dev' >> ~/.hermes/.env
+hermes gateway restart
+```
+
+On Windows, edit your Hermes env file manually and add the same two values:
+
+```env
+API_SERVER_ENABLED=true
+API_SERVER_KEY=iris-local-dev
+```
+
+Then restart Hermes gateway.
+
+Verify:
+
+```bash
+curl http://127.0.0.1:8642/health
+```
+
+Expected:
+
+```json
+{"status":"ok"}
+```
+
+### 4. Run in development mode
 
 ```bash
 npm run dev
 ```
 
-Build/check:
+This starts Vite and Electron with hot reload. In dev mode the macOS Dock may
+show the generic Electron app name, but the packaged app is named Iris.
+
+### 5. Run a production build without packaging
+
+```bash
+npm start
+```
+
+This builds `dist/` and launches Electron from the built files.
+
+If you already built once:
+
+```bash
+npm run start:prod
+```
+
+### 6. Build/check only
 
 ```bash
 npm run build
 ```
+
+## Packaging
+
+### macOS
+
+```bash
+npm run package:mac
+open release/mac-arm64/Iris.app
+```
+
+The app is unsigned by default. If macOS blocks it, right-click the app and choose
+**Open** once.
+
+### Windows
+
+From Windows:
+
+```powershell
+npm install
+Copy-Item .env.example .env
+# edit .env and set GEMINI_API_KEY, HERMES_API_URL, API_SERVER_KEY
+npm run dev
+```
+
+To create an unpacked Windows app directory:
+
+```powershell
+npm run package:win
+```
+
+To create a distributable Windows build:
+
+```powershell
+npm run dist:win
+```
+
+For the packaged Windows app, copy `.env.example` to:
+
+```text
+%USERPROFILE%\\.iris\\.env
+```
+
+Then set `GEMINI_API_KEY` and Hermes values there.
 
 ## Controls
 
@@ -426,8 +557,8 @@ Camera/gesture behavior:
 
 ### Hand gestures (when camera control is enabled)
 
-- **Point (index up)**: move the cursor; hold over a task card ~0.85s to open it
-- **Open palm**: hold-to-scroll inside the open reader (high = up, low = down)
+- **Point (index up)**: move the cursor; hold over a task card briefly to open it
+- **Open palm**: hold-to-scroll inside Comms, Work Stream, and the open reader (high = up, low = down)
 - **Closed fist**: close the reader
 
 > The first launch will prompt for camera permission. Frames are processed
@@ -440,3 +571,12 @@ Camera/gesture behavior:
 - Gemini 3.1 Live function calls are synchronous, so Hermes tasks return a `run_id` immediately and finish in the background.
 - Hermes remains your actual worker agent for tool-heavy tasks.
 - Hand tracking uses `@mediapipe/tasks-vision` (`GestureRecognizer`) entirely on-device and starts only after wake unless manually enabled.
+
+## Open-Source Notes
+
+- `.env` is ignored. Do not commit real Gemini keys or Hermes API keys.
+- The default `API_SERVER_KEY=iris-local-dev` is for local development only; choose
+  your own local key if you share the app broadly.
+- The packaged app is unsigned unless you add your own Apple/Windows signing
+  certificates.
+- Licensed under the MIT License. See `LICENSE`.

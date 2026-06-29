@@ -119,7 +119,7 @@ export default function ReactorCore({
       c.arc(cx, cy, base * 0.95, 0, Math.PI * 2);
       c.fill();
 
-      // Outer micro ticks (JARVIS-style radial scale)
+      // Outer micro ticks (futuristic HUD radial scale)
       const tickCount = 144;
       for (let i = 0; i < tickCount; i++) {
         const a = (i / tickCount) * Math.PI * 2;

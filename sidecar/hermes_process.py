@@ -86,7 +86,7 @@ class HermesProcessManager:
         if not hermes_path:
             raise HermesError(
                 "Could not find the `hermes` binary. Set HERMES_BIN in .env to its full path "
-                "(for example /Users/you/.local/bin/hermes)."
+                "(for example /home/you/.local/bin/hermes or C:\\\\Users\\\\you\\\\path\\\\to\\\\hermes.exe)."
             )
 
         log_dir = Path(__file__).resolve().parent / "runtime"

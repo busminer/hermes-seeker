@@ -771,15 +771,16 @@ export default function App() {
       </div>
 
       <footer className="deck-foot">
-        {logs[0] ? (
-          <span className={`log ${logs[0].level}`}>
-            <em>{new Date(logs[0].timestamp).toLocaleTimeString([], { hour12: false })}</em>
-            {logs[0].message}
-          </span>
-        ) : (
-          <span>system feed idle</span>
-        )}
-        <span className="build">IRIS · build 0.1.0</span>
+        <span className="build-meta">
+          IRIS · build 0.1.0 · by Ashutosh Shrivastava ·{" "}
+          <a href="https://x.com/ai_for_success" target="_blank" rel="noreferrer">
+            X
+          </a>{" "}
+          ·{" "}
+          <a href="https://github.com/ASHR12/iris" target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+        </span>
       </footer>
 
       {booting && <BootSequence visible={booting} />}

@@ -3,20 +3,31 @@
   "productName": "Iris",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "A futuristic Gemini Live voice companion that delegates real work to Hermes.",
+  "homepage": "https://github.com/ASHR12/iris#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ASHR12/iris.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ASHR12/iris/issues"
+  },
   "type": "module",
   "main": "electron/main.mjs",
   "scripts": {
-    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on tcp:5173 && env -u ELECTRON_RUN_AS_NODE electron .\"",
+    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on tcp:5173 && node scripts/run-electron.mjs\"",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "start": "npm run build && env -u ELECTRON_RUN_AS_NODE IRIS_START_PROD=1 electron .",
-    "start:prod": "env -u ELECTRON_RUN_AS_NODE IRIS_START_PROD=1 electron .",
+    "start": "npm run build && node scripts/run-electron.mjs --prod",
+    "start:prod": "node scripts/run-electron.mjs --prod",
     "package:mac": "npm run build && electron-builder --mac --dir",
     "dist:mac": "npm run build && electron-builder --mac",
-    "electron": "env -u ELECTRON_RUN_AS_NODE electron .",
-    "sidecar": ".venv/bin/python sidecar/voice_server.py --mode none",
-    "check:python": ".venv/bin/python -m py_compile sidecar/*.py"
+    "package:win": "npm run build && electron-builder --win --dir",
+    "dist:win": "npm run build && electron-builder --win",
+    "electron": "node scripts/run-electron.mjs",
+    "sidecar": "node scripts/python-command.mjs sidecar",
+    "check:python": "node scripts/python-command.mjs check"
   },
   "dependencies": {
     "@google/genai": "^2.10.0",
@@ -40,7 +51,7 @@
     "wait-on": "latest"
   },
   "build": {
-    "appId": "com.ashr12.iris",
+    "appId": "app.iris.voice",
     "productName": "Iris",
     "directories": {
       "output": "release",
@@ -55,6 +66,11 @@
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "build/icon.png",
+      "target": [
+        "dir"
+      ]
+    },
+    "win": {
       "target": [
         "dir"
       ]

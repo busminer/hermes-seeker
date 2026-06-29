@@ -38,6 +38,9 @@ the active app path is:
 - Gemini can use built-in Google Search for quick facts.
 - Gemini delegates long-running work to Hermes via the local API server.
 - Hermes returns a `run_id` immediately; Iris keeps talking while Hermes works.
+- Source/dev workflows are cross-platform (`npm run dev` works on macOS,
+  Windows, and Linux). Packaged apps read config from `.env` in development or
+  `~/.iris/.env` / `%USERPROFILE%\.iris\.env` once packaged.
 
 ## Architecture
 ```mermaid
@@ -67,6 +70,8 @@ flowchart TD
 - `src/App.tsx`: Voice UI state, WebRTC mic capture, PCM playback, task reader, gestures, Orbital Deck layout.
 - `src/deck.css`: Dark-only Orbital Deck layout styles.
 - `src/useHandControl.ts`: MediaPipe `GestureRecognizer` camera/gesture hook.
+- `scripts/run-electron.mjs`: Cross-platform Electron launcher that clears
+  `ELECTRON_RUN_AS_NODE` and can start the production build.
 - `sidecar/hermes_client.py`: Local Hermes client for `/health`, `/v1/runs`, `/v1/runs/{run_id}/events`, `/stop`, and `/approval`.
 - `sidecar/voice_server.py`: Historical Python prototype/reference, not the main runtime path.
 
@@ -113,7 +118,8 @@ Current stable milestone:
 ## Risks And Mitigations
 - Gemini 3.1 synchronous tools: return immediately; never block on Hermes work.
 - Hermes API not enabled: detect health failure and show exact `.env` setup required.
-- macOS mic/camera permissions: request media permissions explicitly.
+- macOS/Windows/Linux mic/camera permissions: request media permissions explicitly.
 - Do **not** start camera/MediaPipe on app boot; it can interfere with the voice path. Start it after wake.
 - Keep the Gemini Live JS SDK names and model identifiers pinned in README.
 - Keep Hermes tasks non-blocking; return `run_id` immediately.
+- Keep `.env` ignored and document credentials through `.env.example`.
