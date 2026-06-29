@@ -372,7 +372,7 @@ async function startLive() {
     throw new Error("GEMINI_API_KEY is not set");
   }
 
-  const model = process.env.GEMINI_LIVE_MODEL || "models/gemini-3.1-flash-live-preview";
+  const model = process.env.GEMINI_LIVE_MODEL || "gemini-3.1-flash-live-preview";
   ai = new GoogleGenAI({ apiKey });
   emitEvent({ type: "sidecar_status", status: { running: true, model, mode: "webrtc-aec" } });
   emitEvent({ type: "gemini_status", status: "connecting", model });
@@ -519,7 +519,7 @@ function createWindow() {
     },
   });
   const devUrl = process.env.VITE_DEV_SERVER_URL ?? "http://127.0.0.1:5173";
-  const useProd = app.isPackaged || process.env.SEEKER_START_PROD || process.env.IRIS_START_PROD === "1";
+  const useProd = app.isPackaged || process.env.SEEKER_START_PROD === "1";
   if (useProd) mainWindow.loadFile(path.join(repoRoot, "dist", "index.html"));
   else mainWindow.loadURL(devUrl);
 }

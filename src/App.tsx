@@ -434,7 +434,11 @@ export default function App() {
     }
 
     if (event.type === "fatal") {
-      pushLog("error", readString(event.message, "Fatal sidecar error"), eventTime(event));
+      const detail = readString(event.error);
+      pushLog("error", `${readString(event.message, "Fatal sidecar error")}${detail ? `: ${detail}` : ""}`, eventTime(event));
+      setSidecarRunning(false);
+      setGeminiStatus("error");
+      setAudioState("idle");
       return;
     }
 
